@@ -28,8 +28,14 @@ class AnythingllmFeeder < Formula
     # that pattern (torch / mlx are wheel-only and don't fit brew's
     # sdist-resource convention), so we run pip directly and let it
     # resolve PyPI normally.
+    #
+    # The `cd buildpath` + `.[all]` form is more robust than passing
+    # `#{buildpath}[all]` as a single argument — some pip versions
+    # mis-parse an absolute path with a `[extras]` suffix.
     virtualenv_create(libexec, "python3.12")
-    system libexec/"bin/pip", "install", "-v", "#{buildpath}[all]"
+    cd buildpath do
+      system libexec/"bin/pip", "install", "-v", ".[all]"
+    end
 
     bin.install_symlink libexec/"bin/forage"
     bin.install_symlink libexec/"bin/ingest"
