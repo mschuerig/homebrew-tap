@@ -6,8 +6,6 @@
 # Don't edit `url` / `sha256` by hand for routine releases.
 
 class AnythingllmFeeder < Formula
-  include Language::Python::Virtualenv
-
   desc "Extract docs/videos to Markdown (forage) and feed AnythingLLM (ingest)"
   homepage "https://github.com/mschuerig/anythingllm-feeder"
   url "https://github.com/mschuerig/anythingllm-feeder/archive/refs/tags/v0.1.0.tar.gz"
@@ -21,20 +19,20 @@ class AnythingllmFeeder < Formula
   depends_on arch: :arm64
 
   def install
-    # virtualenv_create gives us a brew-managed venv at libexec/ (so
-    # brew auto-rebuilds when python@3.12 is upgraded). Don't use
-    # `venv.pip_install` — it passes `--no-deps`, expecting each
-    # dependency as a separate `resource` block. We deliberately skip
-    # that pattern (torch / mlx are wheel-only and don't fit brew's
-    # sdist-resource convention), so we run pip directly and let it
-    # resolve PyPI normally.
+    # We avoid `Language::Python::Virtualenv` and its `virtualenv_create`
+    # helper deliberately: that path bootstraps pip in a way that silently
+    # dies under brew's sandbox when pip is invoked with non-trivial deps
+    # (it produced an empty log on the GitHub Actions runner). A plain
+    # `python -m venv` + `python -m pip install` works.
     #
-    # The `cd buildpath` + `.[all]` form is more robust than passing
-    # `#{buildpath}[all]` as a single argument — some pip versions
-    # mis-parse an absolute path with a `[extras]` suffix.
-    virtualenv_create(libexec, "python3.12")
+    # `--no-cache-dir` keeps pip from writing to ~/Library/Caches/pip,
+    # which brew's sandbox would block during `brew install`. Without it,
+    # pip's cache-write attempts seem to crash the process silently.
+    python = Formula["python@3.12"].opt_bin/"python3.12"
+    system python, "-m", "venv", libexec
     cd buildpath do
-      system libexec/"bin/pip", "install", "-v", ".[all]"
+      system libexec/"bin/python", "-m", "pip", "install",
+             "--no-cache-dir", "-v", ".[all]"
     end
 
     bin.install_symlink libexec/"bin/forage"
