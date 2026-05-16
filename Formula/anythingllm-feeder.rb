@@ -35,6 +35,23 @@ class AnythingllmFeeder < Formula
              "--no-cache-dir", "-v", ".[all]"
     end
 
+    # Sidestep brew's post-install dylib relocation. Some Python wheels
+    # (rpds-py via jsonschema → docling, possibly others) ship `.so`
+    # files whose Mach-O headerpad is too small for our keg's long
+    # absolute path. Brew then prints "Failed changing dylib ID" and
+    # exits non-zero. Setting the install ID to the bare basename
+    # is shorter than `@rpath/<basename>` so it always fits, and
+    # brew's relocator skips anything that doesn't look like a path.
+    # Harmless for Python C extensions — they're loaded by filesystem
+    # path, not by install ID.
+    Dir.glob("#{libexec}/lib/python*/site-packages/**/*.so").each do |so|
+      next unless File.file?(so)
+      basename = File.basename(so)
+      # Ignore failures (some extensions are bundles without LC_ID_DYLIB).
+      system "bash", "-c",
+             "install_name_tool -id #{basename} '#{so}' 2>/dev/null || true"
+    end
+
     bin.install_symlink libexec/"bin/forage"
     bin.install_symlink libexec/"bin/ingest"
 
