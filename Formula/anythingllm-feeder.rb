@@ -31,17 +31,20 @@ class AnythingllmFeeder < Formula
     python = Formula["python@3.12"].opt_bin/"python3.12"
     system python, "-m", "venv", libexec
     cd buildpath do
-      # `--no-binary rpds-py` builds rpds-py from source. Its PyPI wheel
-      # is compiled without enough Mach-O headerpad to accommodate our
-      # keg's long absolute path, which makes brew's post-install dylib
-      # relocator print "Failed changing dylib ID" and exit non-zero.
-      # Building from source lets the local toolchain set proper
-      # headerpad and avoids the warning entirely. Adds ~1–2 min of
-      # Rust compilation; rpds-py is small.
+      # We use the PyPI wheels (no `--no-binary` flag). One transitive
+      # dep — rpds-py via jsonschema → docling — ships a wheel whose
+      # Mach-O headerpad is too small for brew's post-install dylib
+      # relocator to rewrite the install ID to our keg's long absolute
+      # path. Brew prints "Failed to fix install linkage" and exits
+      # non-zero, but the install otherwise completes (the keg is poured
+      # in full). Python extensions are loaded by filesystem path, not
+      # install ID, so this warning is cosmetic. See caveats.
+      #
+      # We tried `--no-binary rpds-py` to build it with proper
+      # headerpad, but brew's build sandbox blocks Cargo's writes to
+      # ~/.cargo and the source build fails before we get anywhere.
       system libexec/"bin/python", "-m", "pip", "install",
-             "--no-cache-dir", "-v",
-             "--no-binary", "rpds-py",
-             ".[all]"
+             "--no-cache-dir", "-v", ".[all]"
     end
 
     bin.install_symlink libexec/"bin/forage"
@@ -61,6 +64,12 @@ class AnythingllmFeeder < Formula
       (audio/video transcription). First install pulls about 3–5 GB from
       PyPI because docling brings in PyTorch. mlx-whisper requires Apple
       Silicon.
+
+      Brew may print "Failed to fix install linkage" near the end of the
+      install. This is a COSMETIC warning about one Python C extension
+      (rpds-py) whose wheel is built with insufficient Mach-O headerpad.
+      Python loads extensions by filesystem path, not install ID, so the
+      warning has no runtime effect — `forage` and `ingest` work fine.
 
       Data directory — preserved across `brew upgrade` and `brew uninstall`:
         ~/Library/Application Support/anythingllm-feeder/
