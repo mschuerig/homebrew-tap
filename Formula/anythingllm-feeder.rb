@@ -31,25 +31,17 @@ class AnythingllmFeeder < Formula
     python = Formula["python@3.12"].opt_bin/"python3.12"
     system python, "-m", "venv", libexec
     cd buildpath do
+      # `--no-binary rpds-py` builds rpds-py from source. Its PyPI wheel
+      # is compiled without enough Mach-O headerpad to accommodate our
+      # keg's long absolute path, which makes brew's post-install dylib
+      # relocator print "Failed changing dylib ID" and exit non-zero.
+      # Building from source lets the local toolchain set proper
+      # headerpad and avoids the warning entirely. Adds ~1–2 min of
+      # Rust compilation; rpds-py is small.
       system libexec/"bin/python", "-m", "pip", "install",
-             "--no-cache-dir", "-v", ".[all]"
-    end
-
-    # Sidestep brew's post-install dylib relocation. Some Python wheels
-    # (rpds-py via jsonschema → docling, possibly others) ship `.so`
-    # files whose Mach-O headerpad is too small for our keg's long
-    # absolute path. Brew then prints "Failed changing dylib ID" and
-    # exits non-zero. Setting the install ID to the bare basename
-    # is shorter than `@rpath/<basename>` so it always fits, and
-    # brew's relocator skips anything that doesn't look like a path.
-    # Harmless for Python C extensions — they're loaded by filesystem
-    # path, not by install ID.
-    Dir.glob("#{libexec}/lib/python*/site-packages/**/*.so").each do |so|
-      next unless File.file?(so)
-      basename = File.basename(so)
-      # Ignore failures (some extensions are bundles without LC_ID_DYLIB).
-      system "bash", "-c",
-             "install_name_tool -id #{basename} '#{so}' 2>/dev/null || true"
+             "--no-cache-dir", "-v",
+             "--no-binary", "rpds-py",
+             ".[all]"
     end
 
     bin.install_symlink libexec/"bin/forage"
