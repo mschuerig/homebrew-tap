@@ -21,8 +21,15 @@ class AnythingllmFeeder < Formula
   depends_on arch: :arm64
 
   def install
-    venv = virtualenv_create(libexec, "python3.12")
-    venv.pip_install "#{buildpath}[all]"
+    # virtualenv_create gives us a brew-managed venv at libexec/ (so
+    # brew auto-rebuilds when python@3.12 is upgraded). Don't use
+    # `venv.pip_install` — it passes `--no-deps`, expecting each
+    # dependency as a separate `resource` block. We deliberately skip
+    # that pattern (torch / mlx are wheel-only and don't fit brew's
+    # sdist-resource convention), so we run pip directly and let it
+    # resolve PyPI normally.
+    virtualenv_create(libexec, "python3.12")
+    system libexec/"bin/pip", "install", "-v", "#{buildpath}[all]"
 
     bin.install_symlink libexec/"bin/forage"
     bin.install_symlink libexec/"bin/ingest"
