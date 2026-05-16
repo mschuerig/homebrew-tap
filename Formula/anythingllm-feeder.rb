@@ -31,20 +31,16 @@ class AnythingllmFeeder < Formula
     python = Formula["python@3.12"].opt_bin/"python3.12"
     system python, "-m", "venv", libexec
     cd buildpath do
-      # We use the PyPI wheels (no `--no-binary` flag). One transitive
-      # dep — rpds-py via jsonschema → docling — ships a wheel whose
-      # Mach-O headerpad is too small for brew's post-install dylib
-      # relocator to rewrite the install ID to our keg's long absolute
-      # path. Brew prints "Failed to fix install linkage" and exits
-      # non-zero, but the install otherwise completes (the keg is poured
-      # in full). Python extensions are loaded by filesystem path, not
-      # install ID, so this warning is cosmetic. See caveats.
-      #
-      # We tried `--no-binary rpds-py` to build it with proper
-      # headerpad, but brew's build sandbox blocks Cargo's writes to
-      # ~/.cargo and the source build fails before we get anywhere.
+      # Install the project with its core dependencies only
+      # (httpx + send2trash + shtab). The heavy ML extras (docling,
+      # mlx-whisper) are NOT in the brew bundle — they're installed by
+      # the user post-install via `forage install-extras`, which runs
+      # the venv's pip outside brew's sandbox. The brew approach can't
+      # carry them cleanly: their wheels collide with brew's Mach-O
+      # relocator (rpds-py headerpad), and the sandbox-bound build
+      # alternative fails because Cargo can't write to ~/.cargo.
       system libexec/"bin/python", "-m", "pip", "install",
-             "--no-cache-dir", "-v", ".[all]"
+             "--no-cache-dir", "-v", "."
     end
 
     bin.install_symlink libexec/"bin/forage"
@@ -60,16 +56,19 @@ class AnythingllmFeeder < Formula
 
   def caveats
     <<~EOS
-      Bundle includes docling (PDF/Office extraction) and mlx-whisper
-      (audio/video transcription). First install pulls about 3–5 GB from
-      PyPI because docling brings in PyTorch. mlx-whisper requires Apple
-      Silicon.
+      This brew install ships only the small core (httpx + send2trash +
+      shtab) so `ingest` can sync and `forage` can manage collections of
+      already-extracted Markdown. For PDF/Office extraction and
+      audio/video transcription, install the heavy extras into this
+      formula's venv:
 
-      Brew may print "Failed to fix install linkage" near the end of the
-      install. This is a COSMETIC warning about one Python C extension
-      (rpds-py) whose wheel is built with insufficient Mach-O headerpad.
-      Python loads extensions by filesystem path, not install ID, so the
-      warning has no runtime effect — `forage` and `ingest` work fine.
+        forage install-extras
+
+      That pulls in docling (PDF/Office) and mlx-whisper (Apple Silicon
+      transcription) via pip — about 3–5 GB, mostly PyTorch. The download
+      runs outside brew, so the install completes cleanly. Re-run after
+      `brew upgrade anythingllm-feeder` since each version installs into
+      a fresh venv.
 
       Data directory — preserved across `brew upgrade` and `brew uninstall`:
         ~/Library/Application Support/anythingllm-feeder/
