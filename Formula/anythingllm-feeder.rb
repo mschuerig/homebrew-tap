@@ -8,8 +8,8 @@
 class AnythingllmFeeder < Formula
   desc "Extract docs/videos to Markdown (forage) and feed AnythingLLM (ingest)"
   homepage "https://github.com/mschuerig/anythingllm-feeder"
-  url "https://github.com/mschuerig/anythingllm-feeder/archive/refs/tags/v0.2.0.tar.gz"
-  sha256 "264e48f49c8b38f0752caaf252f5b3106a17cdf766d0dd834a1be95b28c4e566"
+  url "https://github.com/mschuerig/anythingllm-feeder/archive/refs/tags/v0.2.1.tar.gz"
+  sha256 "d913e2a2c11f9006dcf8e08d1cbf42f9e47508b78738453eea1a919d70680906"
   license "MIT"
   head "https://github.com/mschuerig/anythingllm-feeder.git", branch: "main"
 
