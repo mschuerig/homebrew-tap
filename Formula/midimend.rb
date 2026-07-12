@@ -7,8 +7,8 @@
 class Midimend < Formula
   desc "Mend your MIDI before the DAW sees it"
   homepage "https://github.com/mschuerig/midimend"
-  url "https://github.com/mschuerig/midimend/archive/refs/tags/v0.1.1.tar.gz"
-  sha256 "8b72c7a0586245afdf3876279821c812c60dbd67a849566ef07f93e8bd73c26a"
+  url "https://github.com/mschuerig/midimend/archive/refs/tags/v0.2.0.tar.gz"
+  sha256 "7bf04e4a7bb2d3827988048b06b999ff8c7e579f41d54de28bca584e61cfc3c9"
   license :public_domain
   head "https://github.com/mschuerig/midimend.git", branch: "main"
 
@@ -26,9 +26,13 @@ class Midimend < Formula
 
   # Starts at login; `crashed: true` restarts after crashes but not after
   # deliberate exits (e.g. missing config), avoiding a respawn loop.
+  # `:interactive` keeps launchd from putting the process in a background
+  # tier, where Darwin coarsens timer leeway and scheduling — milliseconds
+  # of jitter for a MIDI processor.
   service do
     run opt_bin/"midimend"
     keep_alive crashed: true
+    process_type :interactive
     log_path var/"log/midimend.log"
     error_log_path var/"log/midimend.log"
   end
