@@ -7,8 +7,8 @@
 class Midimend < Formula
   desc "Mend your MIDI before the DAW sees it"
   homepage "https://github.com/mschuerig/midimend"
-  url "https://github.com/mschuerig/midimend/releases/download/v0.3.0/midimend-v0.3.0-macos.zip"
-  sha256 "c14a8b93b85e70096fb8af32d347cf2c5702cfce33fc84984f16b2a4e2deca13"
+  url "https://github.com/mschuerig/midimend/releases/download/v0.4.0/midimend-v0.4.0-macos.zip"
+  sha256 "42008a84673558eaea9e1b53e15223e3409238b8e1dcebc3527c374af66d2ee2"
   license :public_domain
 
   head do
@@ -34,6 +34,14 @@ class Midimend < Formula
       bash_completion.install "completions/midimend.bash" => "midimend"
     end
     pkgshare.install "examples"
+
+    # German man page. man(1) matches locale directories exactly (no
+    # de_AT → de_DE fallback), hence one copy plus symlinks.
+    german_man = build.head? ? "packaging/midimend.de.1" : "midimend.de.1"
+    (share/"man/de_DE.UTF-8/man1").install german_man => "midimend.1"
+    %w[de_AT de_CH].each do |locale|
+      (share/"man/#{locale}.UTF-8/man1").install_symlink share/"man/de_DE.UTF-8/man1/midimend.1"
+    end
   end
 
   # Starts at login; `crashed: true` restarts after crashes but not after
